@@ -1,6 +1,3 @@
-using DecisionMakingUtils
-using Test
+using SafeTestsets
 
-@testset "DecisionMakingUtils.jl" begin
-    # Write your tests here.
-end
+@safetestset "Normalization Test Sets" begin include("normalizationtest.jl") end
