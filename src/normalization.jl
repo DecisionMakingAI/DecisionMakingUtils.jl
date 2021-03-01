@@ -26,6 +26,7 @@ julia> feats = nrm(y, x);  # no allocation return
 
 julia> feats = nrm(y, x, fit=true);  # update upper and lower bounds if x is outside the range
 
+```
 """
 struct ZeroOneNormalization{T} <: Any where {T}
     low::T
@@ -70,6 +71,7 @@ julia> feats = nrm(y, x);  # no allocation return
 
 julia> feats = nrm(y, x, fit=true);  # update upper and lower bounds if x is outside the range
 
+```
 """
 struct PosNegNormalization{T} <: Any where {T}
     low::T
@@ -115,6 +117,7 @@ julia> feats = nrm(y, x, fit=true)  # update mean and variance using x
  0.9999
  0.0
 
+```
 """
 struct GaussianNormalization{T} <: Any where {T}
     v::T
