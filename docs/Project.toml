@@ -2,3 +2,8 @@
 DecisionMakingUtils = "e21ee072-cbb1-4ecc-b257-6a793c43976a"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 OnlineStats = "a15396b6-48d5-5d58-9928-6d29437db91e"
+
+[compat]
+Documenter = "0.26"
+OnlineStats = "1.5"
+julia = "1.5"
