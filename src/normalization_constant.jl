@@ -83,7 +83,7 @@ end
 
 function ZeroOneNormalization(low, high)
     a, b = zero(low), zero(low)
-    @. b = one(eltype(low)) / high - low
+    @. b = one(eltype(low)) / (high - low)
     @. a = low
     return LinearNormalization(a,b)
 end
@@ -120,7 +120,22 @@ end
 function (f::LinearNormalization)(x)
     y = zero(x)
     @. y = (x - f.a) * f.b
+    # y = @. (x - f.a) * f.b
     return y
+end
+
+function rrule(f::LinearNormalization, x)
+    y = zero(x)   
+    @. y = (x - f.a) * f.b
+
+    function linearnorm_pullpack(ȳ)
+        dx = @. ȳ * f.b 
+        da = -dx
+        db = @. ȳ * (x - f.a)
+        df = Tagent{typeof(f)}(a=da, b=db)
+        return df, dx
+    end
+    return y, linearnorm_pullpack
 end
 
 function (f::LinearNormalization)(buff::T, x::T) where {T}

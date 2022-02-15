@@ -122,11 +122,59 @@ end
 
 
 function (ϕ::FourierBasis{T,false})(x) where {T}
-    y = zeros(size(ϕ.C, 2))
+    tp = eltype(ϕ.C)
+    y = zeros(tp, size(ϕ.C, 2))
     mul!(y, ϕ.C', x)
     @. y = cos(y)
+    # y = ϕ.C' * x
+    # y = cos.(y)
     return y
 end
+
+function rrule(ϕ::FourierBasis{T,false}, x) where{T}
+    tp = eltype(ϕ.C)
+    y = zeros(tp, size(ϕ.C, 2))
+    z = zeros(tp, size(ϕ.C, 2))
+    mul!(y, ϕ.C', x)
+    @. z = cos(y)
+
+    function fourierbasiscos_pullpack(z̄)
+        dy = @. sin(y) * z̄
+        dC = x * dy'
+        dx = ϕ.C * dy
+        dϕ = Tangent{typeof(ϕ)}(C=dC)
+        return dϕ, dx
+    end
+    return z, fourierbasiscos_pullpack
+end
+
+function (ϕ::FourierBasis{T,false})(x::AbstractMatrix) where {T}
+    tp = eltype(ϕ.C)
+    y = zeros(tp, (size(ϕ.C, 2), size(x, 2)))
+    mul!(y, ϕ.C', x)
+    @. y = cos(y)
+    # y = ϕ.C' * x
+    # y = cos.(y)
+    return y
+end
+
+# function rrule(ϕ::FourierBasis{T,false}, x::AbstractMatrix) where {T}
+#     tp = eltype(ϕ.C)
+#     y = zeros(tp, (size(ϕ.C, 2), size(x, 2)))
+#     z = zeros(tp, (size(ϕ.C, 2), size(x, 2)))
+#     mul!(y, ϕ.C', x)
+#     @. z = cos(y)
+
+#     function fourierbasiscos_pullpack(z̄)
+#         dy = @. sin(y) * z̄
+#         dC = zeros(size(ϕ.C))
+#         dC = x * dy'
+#         dx = ϕ.C * dy
+#         dϕ = Tangent{typeof(ϕ)}(C=dC)
+#         return dϕ, dx
+#     end
+#     return z, fourierbasiscos_pullpack
+# end
 
 function (ϕ::FourierBasis{T,false})(buff::FourierBasisBuffer, x) where {T}
     y = buff.y
@@ -136,12 +184,25 @@ function (ϕ::FourierBasis{T,false})(buff::FourierBasisBuffer, x) where {T}
 end
 
 function (ϕ::FourierBasis{T,true})(x) where {T}
+    tp = eltype(ϕ.C)
     n = size(ϕ.C, 2)
-    y = zeros(n)
-    z = zeros(n*2)
+    y = zeros(tp, n)
+    z = zeros(tp, n*2)
     mul!(y, ϕ.C', x)
     @. z[1:n] = cos(y)
     @. z[n+1:end] = sin(y)
+    return z
+end
+
+function (ϕ::FourierBasis{T,true})(x::AbstractMatrix) where {T}
+    tp = eltype(ϕ.C)
+    n = size(ϕ.C, 2)
+    m = size(x, 2)
+    y = zeros(tp, (n, m))
+    z = zeros(tp, (n*2, m))
+    mul!(y, ϕ.C', x)
+    @. z[1:n, :] = cos(y)
+    @. z[n+1:end, :] = sin(y)
     return z
 end
 

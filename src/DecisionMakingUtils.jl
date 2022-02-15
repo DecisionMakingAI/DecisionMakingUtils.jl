@@ -5,7 +5,8 @@ using LinearAlgebra
 using OnlineStats
 import OnlineStats: fit!
 import Base: length, eltype
-
+using ChainRulesCore
+import ChainRulesCore: rrule, Tangent
 export FourierBasis, FourierBasisBuffer, ConcatentateBasis
 export LinearNormalization, ZeroOneNormalization, PosNegNormalization, GaussianNormalization
 export gaussian_stats, extrema_stats, fit!
