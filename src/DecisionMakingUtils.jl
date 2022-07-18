@@ -7,7 +7,7 @@ import OnlineStats: fit!
 import Base: length, eltype
 using ChainRulesCore
 import ChainRulesCore: rrule, Tangent
-export FourierBasis, FourierBasisBuffer, ConcatentateBasis
+export FourierBasis, FourierBasisBuffer, ConcatentateBasis, TileCodingBasis
 export LinearNormalization, ZeroOneNormalization, PosNegNormalization, GaussianNormalization
 export gaussian_stats, extrema_stats, fit!
 export BufferedFunction
