@@ -148,6 +148,14 @@ function rrule(ϕ::FourierBasis{T,false}, x) where{T}
     return z, fourierbasiscos_pullpack
 end
 
+function (ϕ::FourierBasis{T,false})(buff::FourierBasisBuffer, x::AbstractMatrix) where {T}
+    return ϕ(x)
+end
+
+function (ϕ::FourierBasis{T,true})(buff::FourierBasisBuffer, x::AbstractMatrix) where {T}
+    return ϕ(x)
+end
+
 function (ϕ::FourierBasis{T,false})(x::AbstractMatrix) where {T}
     tp = eltype(ϕ.C)
     y = zeros(tp, (size(ϕ.C, 2), size(x, 2)))

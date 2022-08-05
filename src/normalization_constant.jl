@@ -117,6 +117,11 @@ function eltype(f::LinearNormalization)
     return eltype(f.a)
 end
 
+function (f::LinearNormalization)(x::Real)
+    y = (x - f.a[1]) * f.b[1]
+    return y
+end
+
 function (f::LinearNormalization)(x)
     y = zero(x)
     @. y = (x - f.a) * f.b
@@ -132,13 +137,13 @@ function rrule(f::LinearNormalization, x)
         dx = @. ȳ * f.b 
         da = -dx
         db = @. ȳ * (x - f.a)
-        df = Tagent{typeof(f)}(a=da, b=db)
+        df = Tangent{typeof(f)}(a=da, b=db)
         return df, dx
     end
     return y, linearnorm_pullpack
 end
 
-function (f::LinearNormalization)(buff::T, x::T) where {T}
+function (f::LinearNormalization)(buff::T, x) where {T}
     @. buff = (x - f.a) * f.b
     return buff
 end
