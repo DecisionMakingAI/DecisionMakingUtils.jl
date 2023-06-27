@@ -109,6 +109,12 @@ function GaussianNormalization(μ, σ)
     return LinearNormalization(a, b)
 end
 
+function GaussianNormalization(k::Int)
+    a = zeros(k)
+    b = one(eltype(a)) ./ ones(k)
+    return LinearNormalization(a, b)
+end
+
 function length(f::LinearNormalization)
     return length(f.a)
 end

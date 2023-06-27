@@ -1,6 +1,7 @@
 
 include("fourierbasis.jl")
 include("tilecoding.jl")
+
 struct ConcatentateBasis{TB} <: Any
     ϕs::TB
 end

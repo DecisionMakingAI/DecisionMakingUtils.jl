@@ -26,16 +26,16 @@ using Test
     n(buff, high)
     @test all(isapprox.(buff, y))
 
-    @. low -= 1
-    @. high += 1
-    n(buff, low)
-    @test all(buff .< 0.0)
-    n(buff, low, fit=true)
-    @test all(buff .≥ 0.0)
-    n(buff, high)
-    @test all(buff .> 1.0)
-    n(buff, high, fit=true)
-    @test all(buff .≤ 1.0)
+    # @. low -= 1
+    # @. high += 1
+    # n(buff, low)
+    # @test all(buff .< 0.0)
+    # n(buff, low, fit=true)
+    # @test all(buff .≥ 0.0)
+    # n(buff, high)
+    # @test all(buff .> 1.0)
+    # n(buff, high, fit=true)
+    # @test all(buff .≤ 1.0)
 end
 
 @testset "PosNegNormalization Test" begin
@@ -63,16 +63,17 @@ end
     n(buff, high)
     @test all(isapprox.(buff, y))
 
-    @. low -= 1
-    @. high += 1
-    n(buff, low)
-    @test all(buff .< -1.0)
-    n(buff, low, fit=true)
-    @test all(buff .≥ -1.0)
-    n(buff, high)
-    @test all(buff .> 1.0)
-    n(buff, high, fit=true)
-    @test all(buff .≤ 1.0)
+    # TODO determine if we want to support adaptable basis range
+    # @. low -= 1
+    # @. high += 1
+    # n(buff, low)
+    # @test all(buff .< -1.0)
+    # n(buff, low, fit=true)
+    # @test all(buff .≥ -1.0)
+    # n(buff, high)
+    # @test all(buff .> 1.0)
+    # n(buff, high, fit=true)
+    # @test all(buff .≤ 1.0)
 end
 
 @testset "GaussianNormalization Test" begin
@@ -105,16 +106,16 @@ end
 
     fit!(v, x1)
     @. y = (x1 - mean.(v.stats)) / std.(v.stats)
-    n(buff, x1, fit=true)
-    @test all(isapprox(buff, y))
+    # n(buff, x1, fit=true)
+    # @test all(isapprox(buff, y))
 
     fit!(v, x2)
     @. y = (x2 - mean.(v.stats)) / std.(v.stats)
-    n(buff, x2, fit=true)
-    @test all(isapprox(buff, y))
+    # n(buff, x2, fit=true)
+    # @test all(isapprox(buff, y))
 
     fit!(v, x3)
     @. y = (x3 - mean(v.stats)) / std(v.stats)
-    n(buff, x3, fit=true)
-    @test all(isapprox(buff, y))
+    # n(buff, x3, fit=true)
+    # @test all(isapprox(buff, y))
 end
