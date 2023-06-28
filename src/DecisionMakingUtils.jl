@@ -16,7 +16,7 @@ export LinearNormalization, ZeroOneNormalization, PosNegNormalization, GaussianN
 export gaussian_stats, extrema_stats, fit!
 export BufferedFunction
 export update!
-export TileCodingModel, LinearBuffer
+export TileCodingModel, LinearBuffer, TabularModel, LinearModel
 export value_withgrad
 
 include("basis/basis.jl")

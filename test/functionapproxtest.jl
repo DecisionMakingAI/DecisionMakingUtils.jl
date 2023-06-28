@@ -252,3 +252,66 @@ using Test
     @test all(isapprox.(g, grad))
 
 end
+
+
+
+@testset "TileCodingModel With Buffer Test" begin
+    num_tiles = 3
+    num_tilings = 3
+    num_actions = 4
+    num_outputs = 2
+    dims = 1
+    ϕ = TileCodingBasis(dims, num_tiles, num_tilings=num_tilings, tiling_type=:wrap)
+    m = TileCodingModel(ϕ, num_tiles=num_tiles, num_tilings=num_tilings, num_outputs=num_outputs,num_actions=num_actions)
+    buff = LinearBuffer(m)
+    vec(m.w) .= 1:length(m.w)
+
+    bf = BufferedFunction(m, buff)
+
+    v1 = m(0.0)
+    v2 = m(buff, 0.0)
+    bc = copy(buff.output)
+    bo = copy(v2)
+    v3 = bf(0.0)
+    @test v1 == v2
+    @test v1 == v3
+    @test all(bc .== buff.output)
+    @test all(bo .== v1)
+
+    v1 = m(0.6, 1)
+    v2 = m(buff, 0.6, 1)
+    bc = copy(buff.output)
+    bo = copy(v2)
+    v3 = bf(0.6, 1)
+    @test v1 == v2
+    @test v1 == v3
+    @test all(bc .== buff.output)
+    @test all(bo .== v1)
+
+    v1, g1 = value_withgrad(m, 0.6, 1)
+    v2, g2 = value_withgrad(buff, m, 0.6, 1)
+    bc = copy(buff.output)
+    bo = copy(v2)
+    bg = copy(buff.grad)
+    v3, g3 = value_withgrad(bf, 0.6, 1)
+    @test v1 == v2
+    @test v1 == v3
+    @test all(bc .== buff.output)
+    @test all(bo .== v1)
+    @test all(bg .== buff.grad)
+    @test all(bg .== g1)
+
+    v1, g1 = value_withgrad(m, 0.95)
+    v2, g2 = value_withgrad(buff, m, 0.95)
+    bc = copy(buff.output)
+    bo = copy(v2)
+    bg = copy(buff.grad)
+    v3, g3 = value_withgrad(bf, 0.95)
+    @test v1 == v2
+    @test v1 == v3
+    @test all(bc .== buff.output)
+    @test all(bo .== v1)
+    @test all(bg .== buff.grad)
+    @test all(bg .== g1)
+
+end

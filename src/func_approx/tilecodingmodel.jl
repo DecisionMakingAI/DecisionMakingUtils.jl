@@ -15,13 +15,21 @@ struct TileCodingModel{T,TO,TA,TC}
     end
 end
 
+function TabularModel(::Type{T}, num_states; num_outputs=1, num_actions=1) where {T}
+    TileCodingModel(T, identity, num_tiles=num_states, num_tilings=1, num_outputs=num_outputs, num_actions=num_actions)
+end
+
+function TabularModel(num_states; num_outputs=1, num_actions=1)
+    TabularModel(Float64, num_states, num_outputs=num_outputs, num_actions=num_actions)
+end
+
 function LinearBuffer(m::TileCodingModel{T}) where {T}
     no, na = size(m.w, 1), size(m.w, 4)
     output = zeros(T, no, na)
     grad = zero(m.w)
     TO = typeof(output)
     TG = typeof(grad)
-    new{TO,TG}(output, grad)
+    return LinearBuffer{TO,TG}(output, grad)
 end
 
 function output_at_tile(w::AbstractArray{T,4}, idxs)  where {T}
@@ -221,7 +229,10 @@ end
 
 function value_withgrad(buff, m::TileCodingModel, s, a::Int)
     idxs = m.ϕ(s)
-    v = value(buff.output, m, idxs, a)
+    na = size(m.w, 4)
+    @assert ((a ≤ na) && (a ≥ 1)) "Not a valid action: $a ∉ [1, $na]"
+    out = @view buff.output[:, a]
+    v = value(out, m, idxs, a)
     grad = buff.grad
     fill!(grad, zero(eltype(grad)))
     grad_tile!(grad, idxs, a)
