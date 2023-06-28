@@ -76,7 +76,7 @@ struct LinearNormalization{T} <: Any where {T}
         return new{typeof(a)}(a,b)
     end
 
-    function LinearNormalization(num_features::Int) where {T}
+    function LinearNormalization(num_features::Int)
         LinearNormalization(Float64, num_features)
     end
 end
@@ -160,7 +160,7 @@ function update!(f::LinearNormalization, a, b)
     return nothing
 end
 
-function update!(f::LinearNormalization, st::Group, mode=:default) where {TS<:Union{KahanVariance, Variance}}
+function update!(f::LinearNormalization, st::Group, mode=:default)
     T = eltype(f)
     for i in 1:length(f)
         f.a[i], f.b[i] = update_linearnorm(T, st[i], mode)

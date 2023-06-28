@@ -164,7 +164,6 @@ using Test
     @test f([0.0, 0.0, 0.0]) == (1,1,1,1,1)
 
     num_tilings = 10
-    println("num_tiles: $num_tiles, num_tilings: $num_tilings, num_inputs: $num_inputs, tiling_type: $tiling_type")
     f = TileCodingBasis(num_inputs, num_tiles, num_tilings=num_tilings, tiling_type=tiling_type, tile_loc=:random)
     @test typeof(f([0.0, 0.0, 0.0])) == NTuple{num_tilings,Int}
     @test length(f) == (num_tiles^num_inputs) * num_tilings

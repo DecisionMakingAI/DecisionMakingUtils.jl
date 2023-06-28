@@ -36,7 +36,7 @@ struct FourierBasis{T,TF} <: Any where {T,TF}
         new{typeof(C),both}(C)
     end
     
-    function FourierBasis(num_inputs::Int, dorder::Int, iorder::Int, both::Bool=false) where {T}
+    function FourierBasis(num_inputs::Int, dorder::Int, iorder::Int, both::Bool=false)
         return FourierBasis(Float64, num_inputs, dorder, iorder, both)
     end
 end

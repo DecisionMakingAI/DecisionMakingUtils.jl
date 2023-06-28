@@ -17,10 +17,11 @@ export gaussian_stats, extrema_stats, fit!
 export BufferedFunction
 export update!
 export TileCodingModel, LinearBuffer
+export value_withgrad
 
 include("basis/basis.jl")
 include("bufferedfun.jl")
-# include("functionapprox.jl")
+include("func_approx/functionapprox.jl")
 # include("normalization.jl")
 include("normalization_constant.jl")
 include("stats.jl")
