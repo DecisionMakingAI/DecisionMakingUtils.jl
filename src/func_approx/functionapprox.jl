@@ -19,6 +19,11 @@ function value_withgrad(f::BufferedFunction, s, a::Int)
     return value_withgrad(f.buff, f.f, s, a)
 end
 
+function params(f::BufferedFunction)
+    return params(f.f)
+end
+
+
 
 
 

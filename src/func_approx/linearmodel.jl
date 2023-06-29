@@ -8,6 +8,10 @@ struct LinearModel{T,TW,Tϕ}
     end
 end
 
+function params(m::LinearModel)
+    return m.w
+end
+
 function (m::LinearModel)(s)
     return m.w' * m.ϕ(s)
 end
