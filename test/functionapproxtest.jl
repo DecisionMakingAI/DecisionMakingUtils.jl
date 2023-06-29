@@ -267,7 +267,11 @@ end
     vec(m.w) .= 1:length(m.w)
 
     bf = BufferedFunction(m, buff)
-
+    p1 = params(m)
+    p2 = params(bf)
+    @test p1 == p2
+    @test m.w == p2
+    
     v1 = m(0.0)
     v2 = m(buff, 0.0)
     bc = copy(buff.output)

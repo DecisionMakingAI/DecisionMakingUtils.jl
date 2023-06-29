@@ -32,6 +32,10 @@ function LinearBuffer(m::TileCodingModel{T}) where {T}
     return LinearBuffer{TO,TG}(output, grad)
 end
 
+function params(m::TileCodingModel)
+    return m.w
+end
+
 function output_at_tile(w::AbstractArray{T,4}, idxs)  where {T}
     v = zero(T)
     for i in 1:length(idxs)
