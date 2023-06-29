@@ -19,6 +19,11 @@ function value_withgrad(f::BufferedFunction, s, a::Int)
     return value_withgrad(f.buff, f.f, s, a)
 end
 
+function value_withgrad(f::BufferedFunction, s, policy::TF) where {TF}
+    return value_withgrad(f.buff, f.f, s, policy)
+end
+
+
 function params(f::BufferedFunction)
     return params(f.f)
 end

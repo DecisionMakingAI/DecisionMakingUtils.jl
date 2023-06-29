@@ -222,6 +222,18 @@ function value_withgrad(m::TileCodingModel, s, a::Int)
     return v, grad
 end
 
+function value_withgrad(m::TileCodingModel, s, policy::TF) where {TF<:Function}
+    idxs = m.ϕ(s)
+    buff = make_outputbuff(m)
+    v = value(buff, m, idxs)
+    a = policy(buff)
+    na = size(m.w, 4)
+    @assert ((a ≤ na) && (a ≥ 1)) "Not a valid action: $a ∉ [1, $na]"
+    grad = zero(m.w)
+    grad_tile!(grad, idxs, a)
+    return a, v[..,a], grad
+end
+
 function value_withgrad(buff, m::TileCodingModel, s)
     idxs = m.ϕ(s)
     v = value(buff.output, m, idxs)
@@ -241,4 +253,16 @@ function value_withgrad(buff, m::TileCodingModel, s, a::Int)
     fill!(grad, zero(eltype(grad)))
     grad_tile!(grad, idxs, a)
     return v, grad
+end
+
+function value_withgrad(buff, m::TileCodingModel, s, policy::TF) where {TF<:Function}
+    idxs = m.ϕ(s)
+    v = value(buff.output, m, idxs)
+    a = policy(v)
+    na = size(m.w, 4)
+    @assert ((a ≤ na) && (a ≥ 1)) "Not a valid action: $a ∉ [1, $na]"
+    grad = buff.grad
+    fill!(grad, zero(eltype(grad)))
+    grad_tile!(grad, idxs, a)
+    return a, v[..,a], grad
 end

@@ -251,6 +251,11 @@ using Test
     @. grad[:,3,2,2] .= 1
     @test all(isapprox.(g, grad))
 
+    a, v, g = value_withgrad(m, 0.66, v->2)
+    @test a == 2
+    @test v == [15.0 + 23.0, 16.0 + 24.0]
+    @test all(isapprox.(g, grad))
+    @test_throws "Not a valid action" value_withgrad(m,0.0,x->-1)
 end
 
 
@@ -304,6 +309,17 @@ end
     @test all(bo .== v1)
     @test all(bg .== buff.grad)
     @test all(bg .== g1)
+
+    a, v, g = value_withgrad(bf, 0.6, v->1)
+    @test v == v1
+    @test a==1
+    @test all(g .== g1)
+    a, v, g = value_withgrad(buff, m, 0.6, v->1)
+    @test a == 1
+    @test v == v1
+    @test all(g .== g1)
+
+    @test_throws "Not a valid action" value_withgrad(bf, 0.0,x->num_actions+1)
 
     v1, g1 = value_withgrad(m, 0.95)
     v2, g2 = value_withgrad(buff, m, 0.95)
