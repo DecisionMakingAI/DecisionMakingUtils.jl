@@ -26,7 +26,7 @@ tc = TileCodingBasis(state_dims, num_tiles, num_tilings=num_tilings, tiling_type
 ϕ = Chain(nf, tc)
 
 num_outputs = 1 # if you want to predict successor features, this should be length(tc)
-m = TileCodingModel(ϕ, num_tiles=num_tiles, num_tilings=num_tilings, num_outputs=num_outputs,num_actions=num_actions)
+m = TileCodingModel(ϕ, num_tiles=size(tc)[1], num_tilings=num_tilings, num_outputs=num_outputs,num_actions=num_actions)
 buff = LinearBuffer(m)
 bf = BufferedFunction(m, buff)
 s = rand(state_dims)
