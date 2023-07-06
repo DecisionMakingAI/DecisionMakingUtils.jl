@@ -258,8 +258,6 @@ using Test
     @test_throws "Not a valid action" value_withgrad(m,0.0,x->-1)
 end
 
-
-
 @testset "TileCodingModel With Buffer Test" begin
     num_tiles = 3
     num_tilings = 3
@@ -333,5 +331,304 @@ end
     @test all(bo .== v1)
     @test all(bg .== buff.grad)
     @test all(bg .== g1)
+
+end
+
+@testset "LinearModel Test" begin
+    # test single action, single output, single input
+    num_features = 1
+    num_actions = 1
+    num_outputs = 1
+    ϕ = identity
+    m = LinearModel(ϕ, num_features, num_outputs=num_outputs,num_actions=num_actions)
+    vec(m.w) .= 1:length(m.w)
+    @test size(m.w) == (num_outputs, num_features, num_actions)
+    @test length(m.w) == 1
+    @test eltype(params(m)) == Float64
+    @test params(m) == m.w
+
+    @test m(0.0) == 0.0
+    @test m(1.0) == 1.0
+    @test m(0.0,1) == 0.0
+    @test m([1.0]) == 1.0
+    
+    grad = zero(m.w)
+    grad[1,1,1] = 0.1
+    v, g = value_withgrad(m, 0.1)
+    @test v == 0.1
+    @test all(isapprox.(g, grad))
+    v, g = value_withgrad(m, [0.1])
+    @test v == 0.1
+    @test all(isapprox.(g, grad))
+    v, g = value_withgrad(m, 0.0)
+    @test v == 0.0
+    @. grad = 0.0
+    @test all(isapprox.(g, grad))
+    
+    @test_throws "Not a valid action" m(0.0,4)
+    @test_throws "Not a valid action" value_withgrad(m, 0.0,-3)
+    @test_throws AssertionError m(0.0,-1)
+    @test_throws AssertionError value_withgrad(m, 0.0,0)
+
+    num_actions = 2
+    num_features = 3
+    ϕ = x-> [convert(Float32, x), convert(Float32, 2*x + 1), 0.0f0]
+    m = LinearModel(Float32, ϕ, num_features, num_outputs=num_outputs,num_actions=num_actions)
+    vec(m.w) .= 1:length(m.w)
+    @test size(m.w) == (num_outputs, num_features, num_actions)
+    @test length(m.w) == 6
+    @test eltype(params(m)) == Float32
+
+
+    v = m(0.0)
+    @test v == [2.0f0, 5.0f0]
+    @test eltype(v) == Float32
+    v = m(1.0)
+    @test v == [7.0f0, 19.0f0]
+    v = m(1.0, 1)
+    @test v == 7.0f0
+    @test m(1.0, 2) == 19.0f0
+    @test_throws "Not a valid action" m(1.0, 3)
+
+    grad = zero(m.w)
+    v, g = value_withgrad(m, 0.0)
+    @test v == [2.0f0, 5.0f0]
+    grad[1, :, 1] .= ϕ(0.0)
+    grad[1, :, 2] .= ϕ(0.0)
+    @test all(isapprox.(g, grad))
+
+    v, g = value_withgrad(m, 5.0, 2)
+    @. grad = 0.0
+    grad[1, :, 2] .= ϕ(5.0)
+    @test all(isapprox.(g, grad))
+    @test_throws "Not a valid action" value_withgrad(m, 1.0, -1)
+
+    num_features = 2
+    ϕ = x-> [convert(Float32, x), convert(Float32, 2*x + 1)]
+    num_outputs = 2
+    num_actions = 1
+    m = LinearModel(ϕ, num_features, num_outputs=num_outputs,num_actions=num_actions)
+    vec(m.w) .= 1:length(m.w)
+    @test size(m.w) == (num_outputs, num_features, num_actions)
+    @test length(m.w) == 4
+    @test eltype(params(m)) == Float64
+    
+    v = m(0.0)
+    @test v == [3.0, 4.0]
+    v = m(0.0, 1)
+    @test v == [3.0, 4.0]
+    @test_throws "Not a valid action" m(1.0, 3)
+    
+    grad = zero(m.w)
+    v,g = value_withgrad(m, 1.0, 1)
+    @test v == [1 + 9.0, 2.0 + 12.0]
+    grad[1, :, 1] = ϕ(1.0)
+    grad[2, :, 1] = ϕ(1.0)
+    @test_throws "Not a valid action" value_withgrad(m, 1.0, -1)
+
+    num_actions = 2
+    m = LinearModel(ϕ, num_features, num_outputs=num_outputs,num_actions=num_actions)
+    vec(m.w) .= 1:length(m.w)
+    @test size(m.w) == (num_outputs, num_features, num_actions)
+    @test length(m.w) == 8
+    @test eltype(params(m)) == Float64
+
+    @test m(0.0) == [3.0 7.0; 4.0 8.0] 
+    @test isa(m(0.0), Matrix{Float64})
+    @test m(0.0,1) == [3.0, 4.0]
+    @test m(0.0,2) == [7.0, 8.0]
+    @test m(1.0) == [1.0 + 9.0 5.0 + 21.0; 2.0 + 12.0 6.0 + 24.0]
+    @test_throws "Not a valid action" m(1.0, -1)
+    @test_throws "Not a valid action" m(1.0, 3)
+
+    grad = zero(m.w)
+    v, g = value_withgrad(m, 0.0)
+    @test v == [3.0 7.0; 4.0 8.0]
+    grad[1, :, 1] .= ϕ(0.0)
+    grad[2, :, 1] .= ϕ(0.0)
+    grad[1, :, 2] .= ϕ(0.0)
+    grad[2, :, 2] .= ϕ(0.0)
+    @test all(isapprox.(g, grad))
+
+    v, g = value_withgrad(m, 1.0, 2)
+    grad .= 0.0
+    grad[1, :, 2] .= ϕ(1.0)
+    grad[2, :, 2] .= ϕ(1.0)
+    @test all(isapprox.(g, grad))
+    @test v == [5.0 + 21.0, 6.0 + 24.0]
+    @test_throws "Not a valid action" value_withgrad(m, 1.0, -1)    
+
+end
+
+@testset "LinearModel with Buffer Test" begin
+    # test single action, single output, single input
+    num_features = 1
+    num_actions = 1
+    num_outputs = 1
+    ϕ = identity
+    m = LinearModel(ϕ, num_features, num_outputs=num_outputs,num_actions=num_actions)
+    vec(m.w) .= 1:length(m.w)
+    buff = LinearBuffer(m)
+    bf = BufferedFunction(m, buff)
+
+    @test size(m.w) == (num_outputs, num_features, num_actions)
+    @test size(m.w) == size(params(bf))
+    @test eltype(params(m)) == Float64
+    @test eltype(params(bf)) == Float64
+    @test params(m) == params(bf)
+
+    @test m(0.0) == m(buff, 0.0)
+    @test m(1.0) == m(buff, 1.0)
+    @test m(0.0,1) == m(buff, 0.0, 1)
+    @test m(0.0) == bf(0.0)
+    @test m(1.0) == bf(1.0)
+    @test m(0.0,1) == bf(0.0, 1)
+
+    @test_throws "Not a valid action" m(buff, 0.0,4)
+    @test_throws "Not a valid action" bf(0.0,-3)
+
+    grad = zero(m.w)
+    grad[1,1,1] = 0.0
+    @test value_withgrad(m, 1.0) == value_withgrad(buff, m, 1.0)
+    @test value_withgrad(m, 0.0) == value_withgrad(buff, m, 0.0)
+    @test value_withgrad(m, 0.0, 1) == value_withgrad(buff, m, 0.0, 1)
+    @test value_withgrad(m, 1.0, 1) == value_withgrad(buff, m, 1.0, 1)
+
+    @test value_withgrad(m, 1.0, 1) == value_withgrad(bf, 1.0, 1)
+    @test value_withgrad(m, 0.0, 1) == (0.0, grad)
+    @test value_withgrad(m, 0.0, 1) == value_withgrad(bf, 0.0, 1)
+    @test value_withgrad(m, 0.0) == value_withgrad(bf, 0.0)
+    @test value_withgrad(m, 1.0) == value_withgrad(bf, 1.0)
+
+    @test_throws "Not a valid action" value_withgrad(m, 1.0, -1)
+    @test_throws "Not a valid action" value_withgrad(bf, 1.0, -1)
+
+    num_actions = 2
+    num_features = 2
+    ϕ = x-> [convert(Float32, x), convert(Float32, 2*x + 1)]
+    m = LinearModel(Float32, ϕ, num_features, num_outputs=num_outputs,num_actions=num_actions)
+    vec(m.w) .= 1:length(m.w)
+    buff = LinearBuffer(m)
+    bf = BufferedFunction(m, buff)
+    
+    @test size(m.w) == (num_outputs, num_features, num_actions)
+    @test size(m.w) == size(params(bf))
+    @test eltype(params(m)) == Float32
+    @test eltype(params(bf)) == Float32
+    @test params(m) == params(bf)
+
+    @test isa(m(buff, 0.0), AbstractVector{Float32})
+    @test isa(bf(0.0), AbstractVector{Float32})
+    @test isa(m(buff, 0.0, 1), Float32)
+    @test isa(bf(0.0, 2), Float32)
+
+    @test m(0.0) == m(buff, 0.0)
+    @test m(1.0) == m(buff, 1.0)
+    @test m(0.0,1) == m(buff, 0.0, 1)
+    @test m(0.5,2) == m(buff, 0.5, 2)
+    @test m(0.0) == bf(0.0)
+    @test m(1.0) == bf(1.0)
+    @test m(0.0,1) == bf(0.0, 1)
+    @test m(0.5,2) == bf(0.5, 2)
+
+    @test_throws "Not a valid action" m(buff, 0.0,4)
+    @test_throws "Not a valid action" bf(0.0,-3)
+
+    @test value_withgrad(m, 1.0) == value_withgrad(buff, m, 1.0)
+    @test value_withgrad(m, 0.0) == value_withgrad(buff, m, 0.0)
+    @test value_withgrad(m, 0.0, 1) == value_withgrad(buff, m, 0.0, 1)
+    @test value_withgrad(m, 0.3, 2) == value_withgrad(buff, m, 0.3, 2)
+    
+    @test value_withgrad(m, 1.0, 1) == value_withgrad(bf, 1.0, 1)
+    @test value_withgrad(m, 0.4, 2) == value_withgrad(bf, 0.4, 2)
+    @test value_withgrad(m, 0.0) == value_withgrad(bf, 0.0)
+    @test value_withgrad(m, 1.0) == value_withgrad(bf, 1.0)
+
+    @test_throws "Not a valid action" value_withgrad(m, 1.0, -1)
+    @test_throws "Not a valid action" value_withgrad(bf, 1.0, -1)
+
+    num_outputs = 2
+    num_actions = 1
+    m = LinearModel(ϕ, num_features, num_outputs=num_outputs,num_actions=num_actions)
+    vec(m.w) .= 1:length(m.w)
+    buff = LinearBuffer(m)
+    bf = BufferedFunction(m, buff)
+
+    @test size(m.w) == (num_outputs, num_features, num_actions)
+    @test size(m.w) == size(params(bf))
+    @test eltype(params(m)) == Float64
+    @test eltype(params(bf)) == Float64
+    @test params(m) == params(bf)
+
+    @test isa(m(buff, 0.0), AbstractVector{Float64})
+    @test isa(bf(0.0), AbstractVector{Float64})
+
+    @test m(0.0) == m(buff, 0.0)
+    @test m(1.0) == m(buff, 1.0)
+    @test m(0.0,1) == m(buff, 0.0, 1)
+    @test m(0.0) == bf(0.0)
+    @test m(1.0) == bf(1.0)
+    @test m(0.0,1) == bf(0.0, 1)
+
+    @test_throws "Not a valid action" m(buff, 0.0,2)
+    @test_throws "Not a valid action" bf(0.0,2)
+
+    @test value_withgrad(m, 1.0) == value_withgrad(buff, m, 1.0)
+    @test value_withgrad(m, 0.0) == value_withgrad(buff, m, 0.0)
+    @test value_withgrad(m, 0.0, 1) == value_withgrad(buff, m, 0.0, 1)
+
+    @test value_withgrad(m, 1.0, 1) == value_withgrad(bf, 1.0, 1)
+    @test value_withgrad(m, 0.0, 1) == value_withgrad(bf, 0.0, 1)
+    @test value_withgrad(m, 0.0) == value_withgrad(bf, 0.0)
+    @test value_withgrad(m, 1.0) == value_withgrad(bf, 1.0)
+
+    @test_throws "Not a valid action" value_withgrad(m, 1.0, -1)
+    @test_throws "Not a valid action" value_withgrad(bf, 1.0, -1)
+    @test_throws "Not a valid action" value_withgrad(m, 1.0, 2)
+    @test_throws "Not a valid action" value_withgrad(bf, 1.0, 2)
+
+    num_actions = 3
+    m = LinearModel(ϕ, num_features, num_outputs=num_outputs,num_actions=num_actions)
+    vec(m.w) .= 1:length(m.w)
+    buff = LinearBuffer(m)
+    bf = BufferedFunction(m, buff)
+
+    @test size(m.w) == (num_outputs, num_features, num_actions)
+    @test size(m.w) == size(params(bf))
+    @test eltype(params(m)) == Float64
+    @test eltype(params(bf)) == Float64
+    @test params(m) == params(bf)
+
+    @test isa(m(buff, 0.0), AbstractMatrix{Float64})
+    @test isa(bf(0.0), AbstractMatrix{Float64})
+    @test isa(m(buff, 0.0, 2), AbstractVector{Float64})
+    @test isa(bf(0.0, 3), AbstractVector{Float64})
+
+    @test m(0.0) == m(buff, 0.0)
+    @test m(1.0) == m(buff, 1.0)
+    @test m(0.0,1) == m(buff, 0.0, 1)
+    @test m(0.3,2) == m(buff, 0.3, 2)
+    @test m(0.0) == bf(0.0)
+    @test m(1.0) == bf(1.0)
+    @test m(0.0,1) == bf(0.0, 1)
+    @test m(0.3,2) == bf(0.3, 2)
+
+    @test_throws "Not a valid action" m(buff, 0.0,4)
+    @test_throws "Not a valid action" bf(0.0,-3)
+
+    @test value_withgrad(m, 1.0) == value_withgrad(buff, m, 1.0)
+    @test value_withgrad(m, 0.0) == value_withgrad(buff, m, 0.0)
+    @test value_withgrad(m, 0.0, 1) == value_withgrad(buff, m, 0.0, 1)
+    @test value_withgrad(m, 0.3, 2) == value_withgrad(buff, m, 0.3, 2)
+
+    @test value_withgrad(m, 1.0, 1) == value_withgrad(bf, 1.0, 1)
+    @test value_withgrad(m, 0.4, 2) == value_withgrad(bf, 0.4, 2)
+    @test value_withgrad(m, 0.0) == value_withgrad(bf, 0.0)
+    @test value_withgrad(m, 1.0) == value_withgrad(bf, 1.0)
+
+    @test_throws "Not a valid action" value_withgrad(m, 1.0, -1)
+    @test_throws "Not a valid action" value_withgrad(bf, 1.0, -1)
+    @test_throws "Not a valid action" value_withgrad(m, 1.0, 4)
+    @test_throws "Not a valid action" value_withgrad(bf, 1.0, 4)
 
 end
