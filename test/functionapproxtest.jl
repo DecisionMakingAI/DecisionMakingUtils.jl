@@ -258,6 +258,31 @@ using Test
     @test_throws "Not a valid action" value_withgrad(m,0.0,x->-1)
 end
 
+@testset "TabularModel Test" begin
+    num_states = 10
+    num_actions = 1
+    num_outputs=1
+    m = TabularModel(Float32, num_states, num_outputs=num_outputs,num_actions=num_actions)
+    vec(m.w) .= 1:length(m.w)
+
+    @test eltype(params(m)) == Float32
+    @test [m(i) for i in 1:num_states] == collect(Float32, 1:num_states)
+    @test isa(m(1), Float32)
+
+    num_actions = 3
+    m = TabularModel(num_states, num_outputs=num_outputs,num_actions=num_actions)
+    vec(m.w) .= 1:length(m.w)
+
+    @test eltype(params(m)) == Float64
+    @test [m(i,1) for i in 1:num_states] == collect(Float64, 1:num_states)
+    @test [m(i,2) for i in 1:num_states] == collect(Float64, 1:num_states) .+ num_states
+    @test [m(i,3) for i in 1:num_states] == collect(Float64, 1:num_states) .+ 2*num_states
+    @test isa(m(1,1), Float64)
+
+    @test m(1,1) == m.w[1,1,1,1]
+    @test m(2,3) == m.w[1,2,1,3]
+end
+
 @testset "TileCodingModel With Buffer Test" begin
     num_tiles = 3
     num_tilings = 3
