@@ -5,6 +5,8 @@ Creates a linear function that assumes ϕ is a tile coding basis function, retur
 This struct supports multiple outputs (num_outputs > 1) and action conditioned prediction (num_actions > 1). 
 A TabularModel is also a special case of the tile coding model that uses an identity basis function, with one tiling, and number of tiles equal to the number of states. 
 
+See also: [`TabularModel`](@ref), [`LinearModel`](@ref)
+
 # Examples
 ```jldoctest
 julia> ϕ = TileCodingBasis(1, 3, num_tilings=1, tiling_type=:clip, tile_loc=:equal);
@@ -49,6 +51,16 @@ struct TileCodingModel{T,TO,TA,TC}
     end
 end
 
+"""
+    TabularModel([::Type,] num_states; num_outputs, num_actions)
+
+Creates a tabular model that is a special case of the tile coding model that uses an identity basis function, with one tiling, and number of tiles equal to the number of states.
+This means for state input `s`, `m(s)` will prediction in that state or list of predictions for each action if `num_actions` > 1.
+Similarly, `m(s,a)` will predict the value of action `a` in state `s`.
+TabularModel also inherits all the functionality of the TileCodingModel, e.g., `params`, `value_withgrad`, etc.
+
+See also: [`TileCodingModel`](@ref), [`LinearModel`](@ref)
+"""
 function TabularModel(::Type{T}, num_states; num_outputs=1, num_actions=1) where {T}
     TileCodingModel(T, identity, num_tiles=num_states, num_tilings=1, num_outputs=num_outputs, num_actions=num_actions)
 end
