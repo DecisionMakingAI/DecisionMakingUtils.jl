@@ -134,7 +134,7 @@ function (ϕ::TileCodingBasis{<:Vector{<:StepRangeLen}})(x)
         fwrap(i,x) = get_tiling(ϕ.bins, ϕ.lidxs, ϕ.num_inputs, x, offset(i), tile_index_wrap)
         return ntuple(i->fwrap(i,x), ϕ.num_tilings)
     else
-        freg(i,x) = get_tiling(ϕ.bins, ϕ.lidxs, ϕ.num_inputs, x, offsets(i), tile_index)
+        freg(i,x) = get_tiling(ϕ.bins, ϕ.lidxs, ϕ.num_inputs, x, offset(i), tile_index)
         return ntuple(i->freg(i,x), ϕ.num_tilings)
     end
 end
