@@ -149,6 +149,15 @@ using Test
     @test f([1.0, 1.0, 1.0]) == (1,1)
     @test f([0.99, 0.99, 0.99]) == (prod(tiles_per_dim),1)
 
+    num_tilings = 2
+    f = TileCodingBasis(tiles_per_dim, num_tilings=num_tilings, tiling_type=:clip)
+    @test typeof(f([0.0, 0.0, 0.0])) == Tuple{Int,Int}
+    @test length(f) == prod(tiles_per_dim) * num_tilings
+    @test size(f) == (prod(tiles_per_dim),num_tilings)
+    @test f([0.0, 0.0, 0.0]) == (1,1)
+    @test f([1.0, 1.0, 1.0]) == (prod(tiles_per_dim),prod(tiles_per_dim))
+    @test f([0.99, 0.99, 0.99]) == (prod(tiles_per_dim),prod(tiles_per_dim))
+
     num_tilings = 4
     f = TileCodingBasis(tiles_per_dim, num_tilings=num_tilings, tiling_type=tiling_type, tile_loc=:random)
     @test typeof(f([0.0, 0.0, 0.0])) == NTuple{num_tilings,Int}
