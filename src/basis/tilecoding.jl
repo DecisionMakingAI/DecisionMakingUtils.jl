@@ -45,10 +45,8 @@ julia> f([0.0, 0.0, 0.99])  # this is in the last 100 tiles for the first tiling
 
 ```
 """
-struct TileCodingBasis{T,TL,TC} <: Any where {T,TL,TC}
+struct TileCodingBasis{NI,NT,T,TL,TC} <: Any where {T,TL,TC}
     bins::T
-    num_tilings::Int
-    num_inputs::Int
     tiling_type::Symbol
     lidxs::TL
     cidxs::TC
@@ -64,7 +62,7 @@ struct TileCodingBasis{T,TL,TC} <: Any where {T,TL,TC}
         lidxs = LinearIndices(sz)
         cidxs = CartesianIndices(sz)
         @assert tiling_type == :wrap || tiling_type == :clip
-        new{typeof(bins), typeof(lidxs), typeof(cidxs)}(bins, num_tilings, num_inputs, tiling_type, lidxs, cidxs)
+        new{num_inputs,num_tilings,typeof(bins), typeof(lidxs), typeof(cidxs)}(bins, tiling_type, lidxs, cidxs)
     end
 
     function TileCodingBasis(tiles_per_dim::Vector{Int}; num_tilings::Int, tiling_type::Symbol=:wrap, tile_loc::Symbol=:equal)
@@ -83,7 +81,8 @@ struct TileCodingBasis{T,TL,TC} <: Any where {T,TL,TC}
         lidxs = LinearIndices(sz)
         cidxs = CartesianIndices(sz)
         @assert tiling_type == :wrap || tiling_type == :clip
-        new{typeof(bins), typeof(lidxs), typeof(cidxs)}(bins, num_tilings, length(tiles_per_dim), tiling_type, lidxs, cidxs)
+        num_inputs = length(tiles_per_dim)
+        new{num_inputs, num_tilings, typeof(bins), typeof(lidxs), typeof(cidxs)}(bins, tiling_type, lidxs, cidxs)
     end
 end
 
@@ -99,63 +98,68 @@ function tile_index_wrap(bins, x, offset)
     return idx
 end
 
-function get_tiling(bins::T, lidxs, num_inputs, x, offset, index_func) where {T <: StepRangeLen}
-    return lidxs[CartesianIndex(ntuple(i->index_func(bins, x[i], offset), num_inputs))]
+function get_tiling(bins::T, lidxs::LinearIndices{TN}, x, offset, index_func) where {T <: StepRangeLen,TN}
+    idx = ntuple(i->index_func(bins, x[i], offset), Val(TN))
+    ret = lidxs[CartesianIndex(idx)]
+    return ret
 end
 
-function get_tiling(bins::Vector{<:StepRangeLen}, lidxs, num_inputs, x, offset, index_func)
-    return lidxs[CartesianIndex(ntuple(i->index_func(bins[i], x[i], offset[i]), num_inputs))]
+function get_tiling(bins::Vector{<:StepRangeLen}, lidxs::LinearIndices{TN}, x, offset, index_func) where {TN}
+    idx = ntuple(i->index_func(bins[i], x[i], offset[i]), Val(TN))
+    return lidxs[CartesianIndex(idx)]
 end
 
-function get_tiling(bins::AbstractArray{T,2}, lidxs, num_inputs, x, index_func) where {T}
-
-    return lidxs[CartesianIndex(ntuple(i->index_func(view(bins, :, i), x[i], zero(eltype(x))), num_inputs))]
+function get_tiling(bins::AbstractArray{T,2}, lidxs::LinearIndices{TN}, x, index_func) where {T,TN}
+    idx = ntuple(i->index_func(view(bins, :, i), x[i], zero(eltype(x))), Val(TN))
+    return lidxs[CartesianIndex(idx)]
 end
 
-function get_tiling(bins::Vector{Vector{T}}, lidxs, num_inputs, x, index_func) where {T}
-    return lidxs[CartesianIndex(ntuple(i->index_func(bins[i], x[i], zero(eltype(x))), num_inputs))]
+function get_tiling(bins::Vector{Vector{T}}, lidxs::LinearIndices{TN}, x, index_func) where {T,TN}
+    idx = ntuple(i->index_func(bins[i], x[i], zero(eltype(x))), Val(TN))
+    return lidxs[CartesianIndex(idx)]
 end
 
-
-function (ϕ::TileCodingBasis{<:StepRangeLen})(x)
-    offsets = (0:ϕ.num_tilings-1) ./ ϕ.num_tilings .* (1 / length(ϕ.bins)) # no allocations :) 
+function (ϕ::TileCodingBasis{NI,NT,<:StepRangeLen})(x) where {NI,NT}
+    offsets = (0:NT-1) ./ NT .* (1 / length(ϕ.bins)) # no allocations :) 
     if ϕ.tiling_type == :wrap
-        fwrap(i,x) = get_tiling(ϕ.bins, ϕ.lidxs, ϕ.num_inputs, x, offsets[i], tile_index_wrap)
-        return ntuple(i->fwrap(i,x), ϕ.num_tilings)
+        fwrap(i,x) = get_tiling(ϕ.bins, ϕ.lidxs, x, offsets[i], tile_index_wrap)
+        ret = ntuple(i->fwrap(i,x), Val(NT))
+        return ret
     else
-        freg(i,x) = get_tiling(ϕ.bins, ϕ.lidxs, ϕ.num_inputs, x, offsets[i], tile_index)
-        return ntuple(i->freg(i,x), ϕ.num_tilings)
+        freg(i,x) = get_tiling(ϕ.bins, ϕ.lidxs, x, offsets[i], tile_index)
+        ret = ntuple(i->freg(i,x), Val(NT))
+        return ret
     end
 end
 
-function (ϕ::TileCodingBasis{<:Vector{<:StepRangeLen}})(x)
-    offset(i) = ntuple(j->(i-1)/ϕ.num_tilings * (1/length(ϕ.bins[j])), ϕ.num_inputs)
+function (ϕ::TileCodingBasis{NI,NT,<:Vector{<:StepRangeLen}})(x) where {NI,NT}
+    offset(i) = ntuple(j->(i-1)/NT * (1/length(ϕ.bins[j])), Val(NI))
     if ϕ.tiling_type == :wrap
-        fwrap(i,x) = get_tiling(ϕ.bins, ϕ.lidxs, ϕ.num_inputs, x, offset(i), tile_index_wrap)
-        return ntuple(i->fwrap(i,x), ϕ.num_tilings)
+        fwrap(i,x) = get_tiling(ϕ.bins, ϕ.lidxs, x, offset(i), tile_index_wrap)
+        return ntuple(i->fwrap(i,x), Val(NT))
     else
-        freg(i,x) = get_tiling(ϕ.bins, ϕ.lidxs, ϕ.num_inputs, x, offset(i), tile_index)
-        return ntuple(i->freg(i,x), ϕ.num_tilings)
+        freg(i,x) = get_tiling(ϕ.bins, ϕ.lidxs, x, offset(i), tile_index)
+        return ntuple(i->freg(i,x), Val(NT))
     end
 end
 
-function (ϕ::TileCodingBasis{<:AbstractArray{T,3}})(x) where {T}
+function (ϕ::TileCodingBasis{NI,NT,<:AbstractArray{T,3}})(x) where {NI,NT,T}
     if ϕ.tiling_type == :wrap
-        fwrap(i,x) = get_tiling(view(ϕ.bins,:,:,i), ϕ.lidxs, ϕ.num_inputs, x, tile_index_wrap)
-        return ntuple(i->fwrap(i,x), ϕ.num_tilings)
+        fwrap(i,x) = get_tiling(view(ϕ.bins,:,:,i), ϕ.lidxs, x, tile_index_wrap)
+        return ntuple(i->fwrap(i,x), Val(NT))
     else
-        freg(i,x) = get_tiling(view(ϕ.bins,:,:,i), ϕ.lidxs, ϕ.num_inputs, x, tile_index)
-        return ntuple(i->freg(i,x), ϕ.num_tilings)
+        freg(i,x) = get_tiling(view(ϕ.bins,:,:,i), ϕ.lidxs, x, tile_index)
+        return ntuple(i->freg(i,x), Val(NT))
     end
 end
 
-function (ϕ::TileCodingBasis{Vector{Vector{Vector{T}}}})(x) where {T}
+function (ϕ::TileCodingBasis{NI,NT,Vector{Vector{Vector{T}}}})(x) where {NI,NT,T}
     if ϕ.tiling_type == :wrap
-        fwrap(i,x) = get_tiling(ϕ.bins[i], ϕ.lidxs, ϕ.num_inputs, x, tile_index_wrap)
-        return ntuple(i->fwrap(i,x), ϕ.num_tilings)
+        fwrap(i,x) = get_tiling(ϕ.bins[i], ϕ.lidxs, x, tile_index_wrap)
+        return ntuple(i->fwrap(i,x), Val(NT))
     else
-        freg(i,x) = get_tiling(ϕ.bins[i], ϕ.lidxs, ϕ.num_inputs, x, tile_index)
-        return ntuple(i->freg(i,x), ϕ.num_tilings)
+        freg(i,x) = get_tiling(ϕ.bins[i], ϕ.lidxs, x, tile_index)
+        return ntuple(i->freg(i,x), Val(NT))
     end
 end
 
@@ -166,21 +170,21 @@ end
 Returns the number of feautes produced by the tile coding basis. 
 """
 
-function Base.length(ϕ::TileCodingBasis{<:StepRangeLen})
+function Base.length(ϕ::TileCodingBasis{NI,NT,<:StepRangeLen}) where {NI,NT}
     n = length(ϕ.bins)
-    return n^ϕ.num_inputs * ϕ.num_tilings
+    return n^NI * NT
 end
 
-function Base.length(ϕ::TileCodingBasis{<:Vector{<:StepRangeLen}})
-    return prod(length, ϕ.bins) * ϕ.num_tilings
+function Base.length(ϕ::TileCodingBasis{NI,NT,<:Vector{<:StepRangeLen}}) where {NI,NT}
+    return prod(length, ϕ.bins) * NT
 end
 
-function Base.length(ϕ::TileCodingBasis{<:AbstractArray{T,3}}) where {T}
+function Base.length(ϕ::TileCodingBasis{NI,NT,<:AbstractArray{T,3}}) where {NI,NT,T}
     n,m,k = size(ϕ.bins)
     return n^m * k
 end
 
-function Base.length(ϕ::TileCodingBasis{Vector{Vector{Vector{T}}}}) where {T}
+function Base.length(ϕ::TileCodingBasis{NI,NT,Vector{Vector{Vector{T}}}}) where {NI,NT,T}
     return prod(length, ϕ.bins[1]) * length(ϕ.bins)
 end
 
@@ -189,20 +193,20 @@ end
 
 Returns the number of tiles and tilings (num_tiles_per_tiling, num_tilings) for the tile coding basis.
 """
-function Base.size(ϕ::TileCodingBasis{<:StepRangeLen})
+function Base.size(ϕ::TileCodingBasis{NI,NT,<:StepRangeLen}) where {NI,NT}
     n = length(ϕ.bins)
-    return (n^ϕ.num_inputs,  ϕ.num_tilings)
+    return (n^NI,  NT)
 end
 
-function Base.size(ϕ::TileCodingBasis{<:Vector{<:StepRangeLen}})
-    return (prod(length, ϕ.bins), ϕ.num_tilings)
+function Base.size(ϕ::TileCodingBasis{NI,NT,<:Vector{<:StepRangeLen}}) where {NI,NT}
+    return (prod(length, ϕ.bins), NT)
 end
 
-function Base.size(ϕ::TileCodingBasis{<:AbstractArray{T,3}}) where {T}
+function Base.size(ϕ::TileCodingBasis{NI,NT,<:AbstractArray{T,3}}) where {NI,NT,T}
     n,m,k = size(ϕ.bins)
     return (n^m,k)
 end
 
-function Base.size(ϕ::TileCodingBasis{Vector{Vector{Vector{T}}}}) where {T}
+function Base.size(ϕ::TileCodingBasis{NI,NT,Vector{Vector{Vector{T}}}}) where {NI,NT,T}
     return prod(length, ϕ.bins[1]), length(ϕ.bins)
 end
