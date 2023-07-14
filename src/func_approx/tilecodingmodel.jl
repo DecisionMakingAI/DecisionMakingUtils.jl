@@ -123,9 +123,9 @@ end
 function output_at_tile!(out::AbstractVector{T}, w::AbstractArray{T,4}, idxs)  where {T}
     fill!(out, zero(T))
     no, _, _, na = size(w)
-    @assert no == 1 "not single output model"
-    @assert length(out) == na "Output size mismatch"
-    for i in 1:length(idxs)
+    @assert no == 1 "not single output model $no != 1"
+    @assert length(out) == na "Output size mismatch $na != $(length(out))"
+    for i in eachindex(idxs)
         wi = @view w[1, idxs[i], i, :]
         @. out += wi
     end 
@@ -178,8 +178,8 @@ function value(buff, m::TileCodingModel{T,true,true}, idxs, a) where {T}
 end
 
 function value(buff, m::TileCodingModel{T,true,false}, idxs) where {T}
-    v = output_at_tile!(buff, m.w, idxs)
-    return vec(v)
+    v = output_at_tile!(buff, m.w, idxs);
+    return v
 end
 
 function value(buff, m::TileCodingModel{T,true,false}, idxs, a) where {T}
@@ -191,13 +191,17 @@ end
 
 function value(buff, m::TileCodingModel{T,false,true}, idxs) where {T}
     v = output_at_tile!(buff, m.w, idxs, 1)
-    return vec(v)
+    # out = @view v[:, 1]
+    # return out
+    return v
 end
 
 function value(buff, m::TileCodingModel{T,false,true}, idxs, a) where {T}
     @assert (a == 1) "Not a valid action: $a ∉ [1, 1]"
-    v = output_at_tile!(buff, m.w, idxs,1)
-    return vec(v)
+    v = output_at_tile!(buff, m.w, idxs, 1)
+    # out = @view v[:, 1]
+    # return out
+    return v
 end
 
 function value(buff, m::TileCodingModel{T,false,false}, idxs) where {T}
@@ -211,7 +215,6 @@ function value(buff, m::TileCodingModel{T,false,false}, idxs, a) where {T}
     v = output_at_tile!(buff, m.w, idxs, a)
     return v
 end
-# make sure buffer of prealloc works for each case
 
 function (m::TileCodingModel)(buff, s)
     idxs = m.ϕ(s)
@@ -220,13 +223,20 @@ end
 
 function (m::TileCodingModel{T,false,true})(buff::LinearBuffer, s) where {T}
     idxs = m.ϕ(s)
-    return value(vec(buff.output), m, idxs)
+    output = @view buff.output[:, 1]
+    return value(output, m, idxs)
+end
+
+function (m::TileCodingModel{T,true,false})(buff::LinearBuffer, s) where {T}
+    idxs = m.ϕ(s)
+    output = @view buff.output[1, :]
+    return value(output, m, idxs)
 end
 
 function (m::TileCodingModel)(buff, s, a::Int)
     idxs = m.ϕ(s)
     output = @view buff.output[:, a]
-    return value(vec(output), m, idxs, a)
+    return value(output, m, idxs, a)
 end
 
 function (m::TileCodingModel)(s)
@@ -242,17 +252,21 @@ function (m::TileCodingModel)(s,a::Int)
 end
 
 function grad_tile!(grad::AbstractArray{T,4}, idxs) where {T}
-    for i in 1:length(idxs)
-        @. grad[:, idxs[i], i, :] += 1
+    for i in eachindex(idxs)
+        idx = idxs[i]
+        g = @view grad[:, idx, i, :]
+        @. g = one(T)
     end 
-    return grad
+    return nothing
 end
 
 function grad_tile!(grad::AbstractArray{T,4}, idxs, a) where {T}
-    for i in 1:length(idxs)
-        @. grad[:, idxs[i], i, a] += 1
-    end 
-    return grad
+    for i in eachindex(idxs)
+        idx = idxs[i]
+        g = @view grad[:, idx, i, a]
+        @. g = one(T)
+    end
+    return nothing
 end
 
 function value_withgrad(m::TileCodingModel, s)
@@ -296,7 +310,18 @@ end
 
 function value_withgrad(buff, m::TileCodingModel{T,false,true}, s) where {T}
     idxs = m.ϕ(s)
-    v = value(vec(buff.output), m, idxs)
+    output = @view buff.output[:, 1]
+    v = value(output, m, idxs)
+    grad = buff.grad
+    fill!(grad, zero(eltype(grad)))
+    grad_tile!(grad, idxs)
+    return v, grad
+end
+
+function value_withgrad(buff, m::TileCodingModel{T,true,false}, s) where {T}
+    idxs = m.ϕ(s)
+    output = @view buff.output[1, :]
+    v = value(output, m, idxs)
     grad = buff.grad
     fill!(grad, zero(eltype(grad)))
     grad_tile!(grad, idxs)
@@ -317,9 +342,23 @@ end
 
 function value_withgrad(buff, m::TileCodingModel{T,false,true}, s, policy::TF) where {T,TF<:Function}
     idxs = m.ϕ(s)
-    v = value(vec(buff.output), m, idxs)
+    output = @view buff.output[:, 1]
+    v = value(output, m, idxs)
     a = policy(v)
     @assert a == 1 "Not a valid action: $a ∉ [1, 1]"
+    grad = buff.grad
+    fill!(grad, zero(eltype(grad)))
+    grad_tile!(grad, idxs, a)
+    return a, v, grad
+end
+
+function value_withgrad(buff, m::TileCodingModel{T,true,false}, s, policy::TF) where {T,TF<:Function}
+    idxs = m.ϕ(s)
+    output = @view buff.output[1, :]
+    v = value(output, m, idxs)
+    a = policy(v)
+    na = size(m.w, 4)
+    @assert ((a ≤ na) && (a ≥ 1)) "Not a valid action: $a ∉ [1, $na]"
     grad = buff.grad
     fill!(grad, zero(eltype(grad)))
     grad_tile!(grad, idxs, a)
