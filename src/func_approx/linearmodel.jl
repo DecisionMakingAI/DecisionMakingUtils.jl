@@ -83,22 +83,21 @@ function LinearBuffer(m::LinearModel{T}) where {T}
 end
 
 function value(buff, m::LinearModel{T,true,true}, feats) where {T}
-    v = dot(vec(m.w), feats)
+    wi = @view m.w[1,:,1]
+    v = dot(wi, feats)
     return v
 end
 
 function value(buff, m::LinearModel{T,true,false}, feats) where {T}
-    b = vec(buff)
     w = @view m.w[1,:,:]
-    mul!(b, w', feats)
-    return vec(b)
+    mul!(buff, w', feats)
+    return buff
 end
 
 function value(buff, m::LinearModel{T,false,true}, feats) where {T}
-    b = vec(buff)
     w = @view m.w[:,:,1]
-    mul!(b, w, feats)
-    return vec(b)
+    mul!(buff, w, feats)
+    return buff
 end
 
 function value(buff, m::LinearModel{T,false,false}, feats) where {T}
@@ -113,7 +112,8 @@ end
 
 function value(buff, m::LinearModel{T,true,true}, feats, a::Int) where {T}
     @assert a == 1 "Not a valid action for single action model, $a ≠ 1"
-    v = dot(vec(m.w), feats)
+    wi = @view m.w[1,:,1]
+    v = dot(wi, feats)
     return v
 end
 
@@ -127,10 +127,9 @@ end
 
 function value(buff, m::LinearModel{T,false,true}, feats, a::Int) where {T}
     @assert a == 1 "Not a valid action for single action model, $a ≠ 1"
-    b = vec(buff)
     w = @view m.w[:,:,1]
-    mul!(b, w, feats)
-    return b
+    mul!(buff, w, feats)
+    return buff
 end
 
 function value(buff, m::LinearModel{T,false,false}, feats, a::Int) where {T}
@@ -144,6 +143,20 @@ end
 function (m::LinearModel)(buff, s)
     feats = m.ϕ(s)
     v = value(buff.output, m, feats)
+    return v
+end
+
+function (m::LinearModel{T,true,false})(buff::LinearBuffer, s) where {T}
+    feats = m.ϕ(s)
+    output = @view buff.output[1,:]
+    v = value(output, m, feats)
+    return v
+end
+
+function (m::LinearModel{T,false,true})(buff::LinearBuffer, s) where {T}
+    feats = m.ϕ(s)
+    output = @view buff.output[:,1]
+    v = value(output, m, feats)
     return v
 end
 
@@ -171,6 +184,16 @@ end
 function make_outputbuff(m::LinearModel{T}) where {T}
     no, nf, na = size(m.w)
     return zeros(T, (no, na))
+end
+
+function make_outputbuff(m::LinearModel{T,true,false}) where {T}
+    no, nf, na = size(m.w)
+    return zeros(T, na)
+end
+
+function make_outputbuff(m::LinearModel{T,false,true}) where {T}
+    no, nf, na = size(m.w)
+    return zeros(T, no)
 end
 
 function make_outputbuff(m::LinearModel{T}, a::Int) where {T}
@@ -227,6 +250,24 @@ end
 function value_withgrad(buff, m::LinearModel, s) 
     feats = m.ϕ(s)
     v = value(buff.output, m, feats)
+    grad = buff.grad
+    lineargrad!(grad, feats)
+    return v, grad
+end
+
+function value_withgrad(buff, m::LinearModel{T,true,false}, s) where {T}
+    feats = m.ϕ(s)
+    output = @view buff.output[1,:]
+    v = value(output, m, feats)
+    grad = buff.grad
+    lineargrad!(grad, feats)
+    return v, grad
+end
+
+function value_withgrad(buff, m::LinearModel{T,false,true}, s) where {T}
+    feats = m.ϕ(s)
+    output = @view buff.output[:,1]
+    v = value(output, m, feats)
     grad = buff.grad
     lineargrad!(grad, feats)
     return v, grad
