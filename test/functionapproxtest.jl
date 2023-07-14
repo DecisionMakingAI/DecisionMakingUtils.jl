@@ -324,6 +324,13 @@ end
                 @test all(bc .== buff.output)
                 @test all(bo .== v1)
 
+                @test m(0.0) == m(buff, 0.0)
+                @test m(0.6) == m(buff, 0.6)
+                @test m(1.0) == m(buff, 1.0)
+                @test value_withgrad(m, 0.0) == value_withgrad(buff, m, 0.0)
+                @test value_withgrad(m, 0.6) == value_withgrad(buff, m, 0.6)
+                @test value_withgrad(m, 0.6, x->num_actions) == value_withgrad(buff, m, 0.6, x->num_actions)
+
                 v1, g1 = value_withgrad(m, 0.6, 1)
                 v2, g2 = value_withgrad(buff, m, 0.6, 1)
                 bc = copy(buff.output)
