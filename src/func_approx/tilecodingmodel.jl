@@ -295,7 +295,7 @@ function value_withgrad(m::TileCodingModel, s, policy::TF) where {TF<:Function}
     return a, v[..,a], grad
 end
 
-function value_withgrad(m::TileCodingModel{T,false,true}, s, policy::TF) where {T,TF<:Function}
+function value_withgrad(m::TileCodingModel{T,TB,true}, s, policy::TF) where {T,TB,TF<:Function}
     idxs = m.ϕ(s)
     buff = make_outputbuff(m)
     v = value(buff, m, idxs)
@@ -347,7 +347,7 @@ function value_withgrad(buff, m::TileCodingModel, s, a::Int)
     return v, grad
 end
 
-function value_withgrad(buff, m::TileCodingModel{T,false,true}, s, policy::TF) where {T,TF<:Function}
+function value_withgrad(buff, m::TileCodingModel{T,TB,true}, s, policy::TF) where {T,TB,TF<:Function}
     idxs = m.ϕ(s)
     output = @view buff.output[:, 1]
     v = value(output, m, idxs)

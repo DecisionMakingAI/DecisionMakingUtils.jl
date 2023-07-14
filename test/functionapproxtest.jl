@@ -290,6 +290,62 @@ end
     num_outputs = 2
     dims = 1
 
+    num_tilings = 1
+    num_actions = 1
+    num_outputs = 1
+    ϕ = TileCodingBasis(dims, num_tiles, num_tilings=num_tilings, tiling_type=:wrap)
+    m = TileCodingModel(ϕ, num_tiles=num_tiles, num_tilings=num_tilings, num_outputs=num_outputs,num_actions=num_actions)
+    buff = LinearBuffer(m)
+    vec(m.w) .= 1:length(m.w)
+    @test m(0.0) == m(buff, 0.0)
+    @test m(0.6) == m(buff, 0.6)
+    @test m(1.0) == m(buff, 1.0)
+    @test value_withgrad(m, 0.0) == value_withgrad(buff, m, 0.0)
+    @test value_withgrad(m, 0.6) == value_withgrad(buff, m, 0.6)
+    @test value_withgrad(m, 0.6, x->num_actions) == value_withgrad(buff, m, 0.6, x->num_actions)
+
+    num_actions = 4
+    num_outputs = 1
+    ϕ = TileCodingBasis(dims, num_tiles, num_tilings=num_tilings, tiling_type=:wrap)
+    m = TileCodingModel(ϕ, num_tiles=num_tiles, num_tilings=num_tilings, num_outputs=num_outputs,num_actions=num_actions)
+    buff = LinearBuffer(m)
+    vec(m.w) .= 1:length(m.w)
+    @test m(0.0) == m(buff, 0.0)
+    @test m(0.6) == m(buff, 0.6)
+    @test m(1.0) == m(buff, 1.0)
+    @test value_withgrad(m, 0.0) == value_withgrad(buff, m, 0.0)
+    @test value_withgrad(m, 0.6) == value_withgrad(buff, m, 0.6)
+    @test value_withgrad(m, 0.6, x->num_actions) == value_withgrad(buff, m, 0.6, x->num_actions)
+
+    num_actions = 1
+    num_outputs = 3
+    ϕ = TileCodingBasis(dims, num_tiles, num_tilings=num_tilings, tiling_type=:wrap)
+    m = TileCodingModel(ϕ, num_tiles=num_tiles, num_tilings=num_tilings, num_outputs=num_outputs,num_actions=num_actions)
+    buff = LinearBuffer(m)
+    vec(m.w) .= 1:length(m.w)
+    @test m(0.0) == m(buff, 0.0)
+    @test m(0.6) == m(buff, 0.6)
+    @test m(1.0) == m(buff, 1.0)
+    @test value_withgrad(m, 0.0) == value_withgrad(buff, m, 0.0)
+    @test value_withgrad(m, 0.6) == value_withgrad(buff, m, 0.6)
+    @test value_withgrad(m, 0.6, x->num_actions) == value_withgrad(buff, m, 0.6, x->num_actions)
+
+
+    num_actions = 4
+    num_outputs = 3
+    ϕ = TileCodingBasis(dims, num_tiles, num_tilings=num_tilings, tiling_type=:wrap)
+    m = TileCodingModel(ϕ, num_tiles=num_tiles, num_tilings=num_tilings, num_outputs=num_outputs,num_actions=num_actions)
+    buff = LinearBuffer(m)
+    vec(m.w) .= 1:length(m.w)
+    @test m(0.0) == m(buff, 0.0)
+    @test m(0.6) == m(buff, 0.6)
+    @test m(1.0) == m(buff, 1.0)
+    @test value_withgrad(m, 0.0) == value_withgrad(buff, m, 0.0)
+    @test value_withgrad(m, 0.6) == value_withgrad(buff, m, 0.6)
+    @test value_withgrad(m, 0.6, x->num_actions) == value_withgrad(buff, m, 0.6, x->num_actions)
+
+
+
     for num_tilings in [1,3]
         for num_actions in [1,4]
             for num_outpus in [1,2]
@@ -325,18 +381,18 @@ end
                 @test all(bo .== v1)
 
                 @test m(0.0) == m(buff, 0.0)
-                @test m(0.6) == m(buff, 0.6)
-                @test m(1.0) == m(buff, 1.0)
+                @test m(0.6) == m(buff, 0.63)
+                @test m(0.99) == m(buff, 0.99)
                 @test value_withgrad(m, 0.0) == value_withgrad(buff, m, 0.0)
-                @test value_withgrad(m, 0.6) == value_withgrad(buff, m, 0.6)
-                @test value_withgrad(m, 0.6, x->num_actions) == value_withgrad(buff, m, 0.6, x->num_actions)
+                @test value_withgrad(m, 0.63) == value_withgrad(buff, m, 0.63)
+                @test value_withgrad(m, 0.63, x->num_actions) == value_withgrad(buff, m, 0.63, x->num_actions)
 
-                v1, g1 = value_withgrad(m, 0.6, 1)
-                v2, g2 = value_withgrad(buff, m, 0.6, 1)
+                v1, g1 = value_withgrad(m, 0.63, 1)
+                v2, g2 = value_withgrad(buff, m, 0.63, 1)
                 bc = copy(buff.output)
                 bo = copy(v2)
                 bg = copy(buff.grad)
-                v3, g3 = value_withgrad(bf, 0.6, 1)
+                v3, g3 = value_withgrad(bf, 0.63, 1)
                 @test v1 == v2
                 @test v1 == v3
                 @test all(bc .== buff.output)
@@ -344,11 +400,11 @@ end
                 @test all(bg .== buff.grad)
                 @test all(bg .== g1)
 
-                a, v, g = value_withgrad(bf, 0.6, v->1)
+                a, v, g = value_withgrad(bf, 0.63, v->1)
                 @test v == v1
                 @test a==1
                 @test all(g .== g1)
-                a, v, g = value_withgrad(buff, m, 0.6, v->1)
+                a, v, g = value_withgrad(buff, m, 0.63, v->1)
                 @test a == 1
                 @test v == v1
                 @test all(g .== g1)
