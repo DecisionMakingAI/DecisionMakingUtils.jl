@@ -238,6 +238,11 @@ function value_withgrad(m::LinearModel, s)
     return v, grad
 end
 
+function value_withgrad(m::LinearModel, s, policy::TF) where {TF}
+    buff = LinearBuffer(m)
+    return value_withgrad(buff, m, s, policy)
+end
+
 function value_withgrad(m::LinearModel, s, a::Int)
     feats = m.ϕ(s)
     out = make_outputbuff(m, a)
@@ -264,6 +269,18 @@ function value_withgrad(buff, m::LinearModel{T,true,false}, s) where {T}
     return v, grad
 end
 
+function value_withgrad(buff, m::LinearModel{T,true,false}, s, policy::TF) where {T, TF<:Function}
+    feats = m.ϕ(s)
+    output = @view buff.output[1,:]
+    v = value(output, m, feats)
+    a = policy(v)
+    na = size(m.w,3)
+    @assert a ≥ 1 && a ≤ na "Not a valid action, $a ∉ [1, $na]"
+    grad = buff.grad
+    lineargrad!(grad, feats, a)
+    return a, v[a], grad
+end
+
 function value_withgrad(buff, m::LinearModel{T,false,true}, s) where {T}
     feats = m.ϕ(s)
     output = @view buff.output[:,1]
@@ -271,6 +288,17 @@ function value_withgrad(buff, m::LinearModel{T,false,true}, s) where {T}
     grad = buff.grad
     lineargrad!(grad, feats)
     return v, grad
+end
+
+function value_withgrad(buff, m::LinearModel{T,TB,true}, s, policy::TF) where {T, TB,TF<:Function}
+    feats = m.ϕ(s)
+    output = @view buff.output[:,1]
+    v = value(output, m, feats)
+    a = policy(v)
+    @assert a == 1 "Not a valid action: $a ∉ [1, 1]"
+    grad = buff.grad
+    lineargrad!(grad, feats, a)
+    return a, v, grad
 end
 
 function value_withgrad(buff, m::LinearModel, s, a::Int) 
@@ -282,4 +310,15 @@ function value_withgrad(buff, m::LinearModel, s, a::Int)
     grad = buff.grad
     lineargrad!(grad, feats, a)
     return v, grad
+end
+
+function value_withgrad(buff, m::LinearModel, s, policy::TF) where {TF<:Function} 
+    feats = m.ϕ(s)
+    na = size(m.w,3)
+    v = value(buff.output, m, feats)
+    a = policy(v)
+    @assert a ≥ 1 && a ≤ na "Not a valid action, $a ∉ [1, $na]"
+    grad = buff.grad
+    lineargrad!(grad, feats, a)
+    return a, v[..,a], grad
 end
