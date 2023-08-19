@@ -135,8 +135,13 @@ function (f::LinearNormalization)(x)
     return linear_norm(x, f.a, f.b)
 end
 
-function linear_norm(x, a, b)
+function linear_norm(x::AbstractArray{T}, a::AbstractArray{T}, b::AbstractArray{T}) where {T}
     y = @. (x - a) * b
+    return y
+end
+
+function linear_norm(x::AbstractArray{T}, a::AbstractArray{T2}, b::AbstractArray{T2}) where {T,T2}
+    y = @. convert(T, (x - a) * b)
     return y
 end
 
