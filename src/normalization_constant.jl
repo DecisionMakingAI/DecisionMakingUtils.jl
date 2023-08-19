@@ -124,30 +124,40 @@ function eltype(f::LinearNormalization)
 end
 
 function (f::LinearNormalization)(x::Real)
-    y = (x - f.a[1]) * f.b[1]
-    return y
+    return linear_norm(x, first(f.a), first(f.b))
+end
+
+function linear_norm(x::Real, a::Real, b::Real)
+    return (x - a) * b
 end
 
 function (f::LinearNormalization)(x)
-    y = zero(x)
-    @. y = (x - f.a) * f.b
-    # y = @. (x - f.a) * f.b
+    return linear_norm(x, f.a, f.b)
+end
+
+function linear_norm(x::AbstractArray{T}, a::AbstractArray{T}, b::AbstractArray{T}) where {T}
+    y = @. (x - a) * b
     return y
 end
 
-function rrule(f::LinearNormalization, x)
-    y = zero(x)   
-    @. y = (x - f.a) * f.b
-
-    function linearnorm_pullpack(ȳ)
-        dx = @. ȳ * f.b 
-        da = -dx
-        db = @. ȳ * (x - f.a)
-        df = Tangent{typeof(f)}(a=da, b=db)
-        return df, dx
-    end
-    return y, linearnorm_pullpack
+function linear_norm(x::AbstractArray{T}, a::AbstractArray{T2}, b::AbstractArray{T2}) where {T,T2}
+    y = @. convert(T, (x - a) * b)
+    return y
 end
+
+# function rrule(f::LinearNormalization, x)
+#     y = zero(x)   
+#     @. y = (x - f.a) * f.b
+
+#     function linearnorm_pullpack(ȳ)
+#         dx = @. ȳ * f.b 
+#         da = -dx
+#         db = @. ȳ * (x - f.a)
+#         df = Tangent{typeof(f)}(a=da, b=db)
+#         return df, dx
+#     end
+#     return y, linearnorm_pullpack
+# end
 
 function (f::LinearNormalization)(buff::T, x) where {T}
     @. buff = (x - f.a) * f.b
