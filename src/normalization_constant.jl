@@ -43,7 +43,7 @@ julia> y = zero(x);  # create buffer to prevent allocations
 
 julia> feats = nrm(y, x);  # no allocation return
 
-julia> nrm = PosNegNormalization(low, high);  # normalize each entry to [0,1]
+julia> nrm = PosNegNormalization(low, high);  # normalize each entry to [-1,1]
 
 julia> nrm(x)
 2-element Vector{Float64}:
